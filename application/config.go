@@ -10,20 +10,20 @@ type Config struct {
 	DBHost string
 	DBPort uint32
 	DBSSLMode string
-	ServerAddr string
+	ServerAddr uint32
 }
 func LoadConfig() Config{
 	// load it from env
 
 	cfg := Config{
 		RedisAddress: "localhost:6379",
-		DBUser: "root",
+		DBUser: "postgres",
 		DBPassword: "secret",
 		DBName: "ecommerce",
 		DBHost: "localhost",
-		DBPort: 6543,
-		DBSSLMode: "true",
-		ServerAddr: ":3000",
+		DBPort: 5432,
+		DBSSLMode: "allow",
+		ServerAddr: 3000,
 	}
 	return cfg
 }
