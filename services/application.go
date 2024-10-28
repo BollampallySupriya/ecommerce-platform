@@ -1,28 +1,22 @@
 package services
 
 import (
-	// "database/sql"
-	"database/sql"
-	"time"
+	"context"
+	"github.com/ecommerce-platform/repo"
 )
 
+type App interface {
+	ListAllOrders(ctx context.Context) ([]repo.Order, error)
+}
+
+
 type Application struct {
+	Repo *repo.DB
 }
 
-// time for db process with any transaction
 
-const dbTimeout = time.Second * 3
-
-var db *sql.DB
-
-// TODO check if needed
-
-func New(dbPool *sql.DB) Models {
-	db = dbPool
-	return Models {}
-}
-
-type Models struct {
-	Order Order 
-	JsonResponse JsonResponse
+func New(repo *repo.DB) *Application {
+	return &Application{
+		Repo: repo,
+	}
 }

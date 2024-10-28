@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	models "github.com/ecommerce-platform/services"
 )
 
 type Envelope map[string] interface{}
@@ -59,16 +57,4 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, data interface{}) error {
 		return errors.New("body must have only a single json value")
 	}
 	return nil
-}
-
-
-func ErrorJSON(w http.ResponseWriter, err error, status ...int) {
-	statusCode := http.StatusBadRequest
-	if len(status) > 0 {
-		statusCode = status[0]
-	}
-	var payload models.JsonResponse 
-	payload.Error = true 
-	payload.Message = err.Error()
-	WriteJSON(w, statusCode, payload)
 }

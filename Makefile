@@ -3,13 +3,25 @@ DSN="host=localhost port=5432 user=root password=secret dbname=ecommerce_db sslm
 
 DB_DOCKER_CONTAINER=ecommerce_db_container
 BINARY_NAME=ecommerceplatform
+SQLX_DOCKER_IMAGE=rust
+
+ifeq ($(OS),Windows_NT)
+    CURRENT_DIR = $(shell cd)
+else
+    CURRENT_DIR = $(shell pwd)
+endif
 
 # install make and run the commands one by one for the changes to take place.
+
+# make create-network
+create-network:
+	docker network create ecommerce 
 
 # creating the container with postgres software
 # make postgres
 postgres:
-	docker run --name ${DB_DOCKER_CONTAINER} -p 5432:5432 POSTGRES_USER=root -e ROSTGRES_PASSWORD=secret -d postgres:12-alphine
+	@echo "${DB_DOCKER_CONTAINER}"
+	docker run --network ecommerce --name ${DB_DOCKER_CONTAINER} -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
 
 # creating ecommerce_db database inside the postgres container
 # make createdb 
@@ -24,7 +36,7 @@ stop_containers:
 		docker stop $$(docker ps -q); \
 	else \
 		echo "no active containers found..."; \
-	fi
+	fi \
 
 # make start-docker
 start-docker:
@@ -32,15 +44,17 @@ start-docker:
 
 # make create_migrations
 create_migrations:
-	sqlx migrate add -r init
+	@echo "Current directory: ${CURRENT_DIR}"
+	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate add -r init"
 
 # make migrate-up
 migrate-up:
-	sqlx migrate run --database-url "postgres://root:secret@localhost:5432/ecommerce_db?sslmode=disable"
+	@echo "Running migrations..."
+	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate run --database-url 'postgres://root:secret@ecommerce_db_container:5432/ecommerce_db?sslmode=disable'"
 
 # make migrate-down
 migrate-down:
-	sqlx migrate revert --database-url "postgres://root:secret@localhost:5432/ecommerce_db?sslmode=disable"
+	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate revert --database-url 'postgres://root:secret@ecommerce_db_container:5432/ecommerce_db?sslmode=disable'"
 
 # make build
 build:
@@ -50,10 +64,11 @@ build:
 
 # make start    [first runs build then run stop_containers then start-docker then execute this statements]
 start: build stop_containers start-docker
-	@env PORT=${PORT} DSN=${DSN} ./${BINARY_NAME} &
-	@echo "api started!"
+	@env PORT=${PORT} DSN=${DSN} ./${BINARY_NAME} & \
+	@echo "api started!" \
  	go run cmd/server/main.go 
 
+# make stop
 stop: 
 	@echo "Stopping backend"
 	@-pgkill -SIGTERM -f "./${BINARY_NAME}"

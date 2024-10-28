@@ -1,56 +1,41 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"os"
+	"context"
+	"time"
+	"log"
 
-	"github.com/ecommerce-platform/db"
-	"github.com/ecommerce-platform/router"
+	"github.com/ecommerce-platform/repo"
+	"github.com/ecommerce-platform/helpers"
 	"github.com/ecommerce-platform/services"
+	"github.com/ecommerce-platform/router"
 )
 
-type Config struct{
-	Port string 
-}
 
-type Application struct {
-	Config Config
-	Models services.Models
-}
-
-var port = os.Getenv("PORT") // 8080
-
-func (app *Application) Serve() error {
-	
-	server := &http.Server{
-		Addr: fmt.Sprintf(":%s", port),
-		Handler: router.Routes(),
-	}
-	return server.ListenAndServe()
-}
 
 
 func main() {
-	var cfg Config 
-	cfg.Port = port 
 
-	dsn := os.Getenv("DSN")
-	dbConn, err := db.ConnectPostgres(dsn)
+	// time for db process with any transaction
+	const dbTimeout = time.Second * 3
+
+	var cfg *helpers.Config 
+	cfg = helpers.LoadConfig()
+
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+
+	defer cancel()
+
+	dbConn, err := repo.ConnectDB(ctx, *cfg)
+
 	if err != nil {
-		fmt.Println("Error connecting DB")
+		log.Fatal("Error While Connecting DB!!")
 	}
-	defer dbConn.DB.Close()
+	app := services.New(dbConn)
 
-	app := &Application{
-		Config: cfg,
-		Models: services.New(dbConn.DB),
-	}
+	server := router.New(app)
 
-	err = app.Serve()
-	if err != nil {
-		fmt.Println("Error starting server")
-	}
+	server.Start(ctx, cfg.Port)
 }
 
 // installations :
