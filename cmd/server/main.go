@@ -29,12 +29,13 @@ func main() {
 	dbConn, err := repo.ConnectDB(ctx, *cfg)
 
 	if err != nil {
-		log.Fatal("Error While Connecting DB!!")
+		log.Fatalf("Error While Connecting DB: %v", err)
 	}
 	app := services.New(dbConn)
 
 	server := router.New(app)
 
+	log.Printf("Starting server on port %s...", cfg.Port)
 	server.Start(ctx, cfg.Port)
 }
 

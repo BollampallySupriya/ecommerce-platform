@@ -30,7 +30,7 @@ createdb:
 
 # make stop_containers
 stop_containers:
-	@echo "Stopping other docker containers..."
+	@echo "Stopping other docker containers..." \
 	if [ $$(docker ps -q) ]; then \
 		echo "found and stopped containers..."; \
 		docker stop $$(docker ps -q); \
@@ -64,7 +64,7 @@ build:
 
 # make start    [first runs build then run stop_containers then start-docker then execute this statements]
 start: build stop_containers start-docker
-	@env PORT=${PORT} DSN=${DSN} ./${BINARY_NAME} & \
+	@set PORT=${PORT} DSN=${DSN} .\\${BINARY_NAME}.exe & \
 	@echo "api started!" \
  	go run cmd/server/main.go 
 

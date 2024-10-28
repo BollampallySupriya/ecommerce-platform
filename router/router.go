@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"log"
 	"github.com/ecommerce-platform/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -45,34 +46,48 @@ func (router Router) LoadRoutes() http.Handler {
 
 func (r *Router) Start(ctx context.Context, port string) error {
 	server := &http.Server{
-		Addr: port,
+		Addr: fmt.Sprintf(":%s", port),
 		Handler: r.router,
 	}
 
+	go func() {
+        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("ListenAndServe(): %v", err)
+        }
+    }()
+
 	defer func() {
 		if err:= r.App.Repo.Conn.Close(ctx); err != nil {
-			fmt.Println("Failed to close redis", err)
+			fmt.Println("Failed to close DB", err)
 		}
 	}()
 
+    <-ctx.Done() // waits for ctx cancellation to gracefully shutdown
+    log.Println("Shutting down server...")
 
-	ch := make(chan error, 1)
-	go func() {
-		err := server.ListenAndServe()
-		if err != nil {
-			ch <- fmt.Errorf("error occurred %w", err)
-		}
-		defer close(ch)
-	}()
+    shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer shutdownCancel()
+    return server.Shutdown(shutdownCtx)
 
 
-	select {
-	case err := <-ch:
-		return err
-	case <-ctx.Done():
-		timeout, cancel := context.WithTimeout(context.Background(), time.Second * 10)
-		defer cancel()
-		return server.Shutdown(timeout)
-	}
+
+	// ch := make(chan error, 1)
+	// go func() {
+	// 	err := server.ListenAndServe()
+	// 	if err != nil {
+	// 		ch <- fmt.Errorf("error occurred %w", err)
+	// 	}
+	// 	defer close(ch)
+	// }()
+
+
+	// select {
+	// case err := <-ch:
+	// 	return err
+	// case <-ctx.Done():
+	// 	timeout, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+	// 	defer cancel()
+	// 	return server.Shutdown(timeout)
+	// }
 
 }

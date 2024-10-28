@@ -2,10 +2,11 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"log"
 
-	"github.com/jackc/pgx/v4"
 	"github.com/ecommerce-platform/helpers"
+	"github.com/jackc/pgx/v4"
 )
 
 type DB struct {
@@ -14,16 +15,18 @@ type DB struct {
 
 
 func ConnectDB(ctx context.Context ,cfg helpers.Config) (*DB, error) {
+	fmt.Println(cfg.DATABASE_URL)
 	config, err := pgx.ParseConfig(cfg.DATABASE_URL)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
 	}
+	fmt.Println(config)
 
 	dbConn, err := pgx.ConnectConfig(ctx, config)
 
 	if err != nil {
-		log.Fatal("Cannot connect to database!!!")
+		log.Fatalf("Cannot connect to database!!! %v", err)
 		return nil, err
 	}
 

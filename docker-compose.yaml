@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminuser
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port to the host for external access (optional)
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # Persist database data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Path to your Dockerfile
+    ports:
+      - "8080:8080"  # Expose your application port to the host
+    environment:
+      DATABASE_URL: "postgres://admin:adminuser@db:5432/ecommerce_db?sslmode=disable"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
