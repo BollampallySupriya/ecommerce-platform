@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"github.com/ecommerce-platform/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -35,40 +38,73 @@ func (router Router) LoadRoutes() http.Handler {
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders: []string{"Link"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge: 300,
 	}))
 
-	newRouter.Get("/api/v1/orders", router.App.GetAllOrders)
+	newRouter.Route("/api/v1/orders", router.loadOrderRoutes)
 
 	return newRouter 
 }
 
+func (router Router) loadOrderRoutes(orderRouter chi.Router) {
+	orderRouter.Get("/", router.App.GetAllOrders)
+	orderRouter.Post("/", router.App.CreateOrder)
+	orderRouter.Put("/{id}", router.App.GetAllOrders)
+	orderRouter.Delete("/{id}", router.App.GetAllOrders)
+}
+
 func (r *Router) Start(ctx context.Context, port string) error {
 	server := &http.Server{
-		Addr: fmt.Sprintf(":%s", port),
+		Addr:    fmt.Sprintf(":%s", port),
 		Handler: r.router,
 	}
 
-	go func() {
-        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatalf("ListenAndServe(): %v", err)
-        }
-    }()
+	// Creating a new context that can be canceled to manage shutdown
+	stopCtx, stop := context.WithCancel(context.Background())
+	defer stop()
 
-	defer func() {
-		if err:= r.App.Repo.Conn.Close(ctx); err != nil {
-			fmt.Println("Failed to close DB", err)
+	// Start the server in a goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe(): %v", err)
 		}
 	}()
 
-    <-ctx.Done() // waits for ctx cancellation to gracefully shutdown
-    log.Println("Shutting down server...")
+	// Capture interrupt signals to stop the server gracefully
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		select {
+		case <-sigChan:
+			log.Println("Received shutdown signal")
+			stop() // Cancel the stopCtx
+		case <-ctx.Done():
+			stop() // Stop the server if parent ctx is canceled
+		}
+	}()
 
-    shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer shutdownCancel()
-    return server.Shutdown(shutdownCtx)
+	// Wait for stopCtx to be canceled
+	<-stopCtx.Done()
+	log.Println("Shutting down server...")
 
+	// Create a new context with a timeout for the server shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	// Shut down the server gracefully
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server Shutdown Failed: %v", err)
+	}
+
+	// Close the database connection after server shutdown
+	if err := r.App.Repo.Conn.Close(ctx); err != nil {
+		log.Printf("Failed to close DB: %v", err)
+	}
+
+	log.Println("Server and DB connections closed successfully.")
+	return nil
+}
 
 
 	// ch := make(chan error, 1)
@@ -90,4 +126,3 @@ func (r *Router) Start(ctx context.Context, port string) error {
 	// 	return server.Shutdown(timeout)
 	// }
 
-}

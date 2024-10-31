@@ -46,3 +46,29 @@ func (DB *DB) ListAllOrders(ctx context.Context) ([]*Order, error){
 	}
 	return orders, nil
 }
+
+func (DB *DB) PostOrder(ctx context.Context, order *Order) (*Order, error) {
+	query := `
+		INSERT INTO orders (id, name, customer, price, line_items, delivery_address, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, name, customer, price, line_items, delivery_address, created_at, updated_at;
+	`
+
+	var newOrder Order
+	err := DB.Conn.QueryRow(ctx, query,
+		order.ID,
+		order.Name,
+		order.Customer,
+		order.Price,
+		order.LineItems,
+		order.DeliveryAddress,
+		order.CreatedAt,
+		order.UpdatedAt,
+	).Scan(&newOrder)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &newOrder, nil
+}
