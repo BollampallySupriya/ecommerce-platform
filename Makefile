@@ -1,6 +1,6 @@
 PORT=8080
-DSN="host=localhost port=5432 user=root password=secret dbname=ecommerce_db sslmode=disable timezone=UTC connect_timeout=5"
-
+DSN="host=localhost port=5432 user=postgres password=secret dbname=ecommerce_db sslmode=disable timezone=UTC connect_timeout=5"
+DATABASE_URL=postgres://postgres:secret@localhost:5432/ecommerce_db?sslmode=disable 
 DB_DOCKER_CONTAINER=ecommerce_db_container
 BINARY_NAME=ecommerceplatform
 SQLX_DOCKER_IMAGE=rust
@@ -21,12 +21,12 @@ create-network:
 # make postgres
 postgres:
 	@echo "${DB_DOCKER_CONTAINER}"
-	docker run --network ecommerce --name ${DB_DOCKER_CONTAINER} -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
+	docker run --network ecommerce --name ${DB_DOCKER_CONTAINER} -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
 
 # creating ecommerce_db database inside the postgres container
 # make createdb 
 createdb:
-	docker exec -it ${DB_DOCKER_CONTAINER} createdb --username=root --owner=root ecommerce_db 
+	docker exec -it ${DB_DOCKER_CONTAINER} createdb --username=postgres --owner=postgres ecommerce_db 
 
 # make stop_containers
 stop_containers:
@@ -44,17 +44,17 @@ start-docker:
 
 # make create_migrations
 create_migrations:
-	@echo "Current directory: ${CURRENT_DIR}"
-	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate add -r init"
+	@echo "Creating Migrations"
+	sqlx migrate add -r init
 
 # make migrate-up
 migrate-up:
 	@echo "Running migrations..."
-	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate run --database-url 'postgres://root:secret@ecommerce_db_container:5432/ecommerce_db?sslmode=disable'"
+	sqlx migrate run --database-url 'postgres://postgres:secret@localhost:5432/ecommerce_db?sslmode=disable'
 
 # make migrate-down
 migrate-down:
-	docker run --network ecommerce --rm -v "${CURRENT_DIR}:/app" -w /app ${SQLX_DOCKER_IMAGE} bash -c "cargo install sqlx-cli && sqlx migrate revert --database-url 'postgres://root:secret@ecommerce_db_container:5432/ecommerce_db?sslmode=disable'"
+	sqlx migrate revert --database-url 'postgres://postgres:secret@localhost:5432/ecommerce_db?sslmode=disable'
 
 # make build
 build:
