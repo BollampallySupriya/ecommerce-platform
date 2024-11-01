@@ -8,10 +8,10 @@ import (
 type Order struct {
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
-	Customer        uint64   `json:"customer"`
+	Customer        uint64   `json:"customer_id"`
 	Price           float64  `json:"price"`
-	LineItems       []uint64 `json:"lineItems"`
-	DeliveryAddress string   `json:"deliveryAddress"`
+	LineItems       []uint64 `json:"line_items"`
+	DeliveryAddress string   `json:"delivery_address"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time   `json:"updated_at"`
 }
@@ -80,4 +80,41 @@ func (DB *DB) PostOrder(ctx context.Context, order *Order) (*Order, error) {
 	}
 
 	return &newOrder, nil
+}
+
+
+func (DB *DB) UpdateOrder(ctx context.Context, orderID string, updateOrder *Order) (*Order, error) {
+
+	query := `UPDATE orders SET name = COALESCE($1, name), 
+                                customer_id = COALESCE($2, customer_id), 
+                                price = COALESCE($3, price), 
+                                line_items = COALESCE($4, line_items), 
+                                delivery_address = COALESCE($5, delivery_address), 
+                                updated_at = NOW() 
+              WHERE id = $6 RETURNING id, name, customer_id, price, line_items, delivery_address, updated_at;`
+
+	var updatedOrder Order
+
+	err := DB.Conn.QueryRow(ctx, query,
+				updateOrder.Name,
+				updateOrder.Customer,
+				updateOrder.Price,
+				updateOrder.LineItems,
+				updateOrder.DeliveryAddress,
+				orderID,
+			).Scan(
+				&updatedOrder.ID,
+				&updatedOrder.Name,
+				&updatedOrder.Customer,
+				&updatedOrder.Price,
+				&updatedOrder.LineItems,
+				&updatedOrder.DeliveryAddress,
+				&updatedOrder.UpdatedAt,
+			)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedOrder, nil
 }

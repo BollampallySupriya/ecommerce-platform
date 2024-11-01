@@ -12,7 +12,7 @@ import (
 	"github.com/ecommerce-platform/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	// "github.com/go-chi/cors"
+	"github.com/go-chi/cors"
 )
 
 type Router struct {
@@ -34,14 +34,14 @@ func New(app *services.Application) *Router {
 func (router *Router) LoadRoutes() http.Handler {
 	newRouter := chi.NewRouter()
 	newRouter.Use(middleware.Logger)
-	// newRouter.Use(cors.Handler(cors.Options{
-	// 	AllowedOrigins: []string{"http://*", "https://*"},
-	// 	AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	// 	AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-	// 	ExposedHeaders: []string{"Link"},
-	// 	AllowCredentials: false,
-	// 	MaxAge: 300,
-	// }))
+	newRouter.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"http://*", "https://*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders: []string{"Link"},
+		AllowCredentials: false,
+		MaxAge: 300,
+	}))
 
 	newRouter.Route("/api/v1/orders", router.loadOrderRoutes)
 
@@ -51,7 +51,7 @@ func (router *Router) LoadRoutes() http.Handler {
 func (router *Router) loadOrderRoutes(orderRouter chi.Router) {
 	orderRouter.Get("/", router.App.GetAllOrders)
 	orderRouter.Post("/", router.App.CreateOrder)
-	orderRouter.Put("/{id}", router.App.GetAllOrders)
+	orderRouter.Put("/{id}", router.App.UpdateOrder)
 	orderRouter.Delete("/{id}", router.App.GetAllOrders)
 }
 

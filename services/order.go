@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
 	"github.com/ecommerce-platform/repo"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -60,4 +62,24 @@ func (App *Application) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(response) 
+}
+
+func (App *Application) UpdateOrder(w http.ResponseWriter, r *http.Request) {
+	var orderID = chi.URLParam(r, "id")
+
+	var updateOrder *repo.Order
+
+	if err := json.NewDecoder(r.Body).Decode(&updateOrder); err != nil {
+		http.Error(w, "Error while updating order.", http.StatusBadRequest)
+		return 
+	}
+
+	order, err := App.Repo.UpdateOrder(context.Background(), orderID, updateOrder)
+	
+	if err != nil {
+		http.Error(w, "Error while updating order.", http.StatusBadRequest)
+		return 
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(order)
 }
