@@ -52,7 +52,7 @@ func (router *Router) loadOrderRoutes(orderRouter chi.Router) {
 	orderRouter.Get("/", router.App.GetAllOrders)
 	orderRouter.Post("/", router.App.CreateOrder)
 	orderRouter.Put("/{id}", router.App.UpdateOrder)
-	orderRouter.Delete("/{id}", router.App.GetAllOrders)
+	orderRouter.Delete("/{id}", router.App.DeleteOrder)
 }
 
 func (r *Router) Start(ctx context.Context, port string) error {

@@ -83,3 +83,16 @@ func (App *Application) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(order)
 }
+
+func (App *Application) DeleteOrder(w http.ResponseWriter, r *http.Request) {
+	var orderID = chi.URLParam(r, "id")
+
+	err := App.Repo.DeleteOrder(context.Background(), orderID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("Deleted Order Successfully"))
+}

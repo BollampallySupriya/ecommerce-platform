@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type Order struct {
 
 func (DB *DB) ListAllOrders(ctx context.Context) ([]*Order, error){
 
-	query := `SELECT * from order;`
+	query := `SELECT * from orders;`
 
 	rows, err := DB.Conn.Query(ctx, query)
 
@@ -117,4 +118,20 @@ func (DB *DB) UpdateOrder(ctx context.Context, orderID string, updateOrder *Orde
 	}
 
 	return &updatedOrder, nil
+}
+
+
+func (DB *DB) DeleteOrder(ctx context.Context, orderID string) error {
+	query := `DELETE FROM orders WHERE id=$1;`
+
+	result, err := DB.Conn.Exec(ctx, query, orderID)
+	if err != nil {
+		return err 
+	}
+	rowsAffected := result.RowsAffected()
+	fmt.Println("Deleted rows are :", rowsAffected)
+	if rowsAffected == 0 {
+		return fmt.Errorf("no order with given id found")
+	}
+	return nil
 }
